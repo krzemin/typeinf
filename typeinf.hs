@@ -1,5 +1,7 @@
 module TypeInf where
 
+import Data.List
+
 type VarTypeName = Int
 data Type = VarType VarTypeName | FunType Type Type
 
@@ -43,31 +45,61 @@ inferType' (Var x) newType =
     typeOfX = VarType newType
   in Just ((freshContext, typeOfX), newType + 1)
 
-{--
 inferType' (App m1 m2) newType
-  | inferType m1 newType == Nothing -> Nothing
-  | inferType m2 newType == Nothing -> Nothing
-  | otherwise ->
+  | inferType' m1 0 == Nothing = Nothing
+  | inferType' m2 0 == Nothing = Nothing
+  | otherwise =
     let
-      ((m1TypeContext, m1Type), newType') = inferType m1 newType
-      ((m2TypeContext, m2Type), newType'') = inferType m2 newType'
-      m1TypeContextDomain = fst $ unzip m1Context
-      m2TypeContextDomain = fst $ unzip m2Context
+      Just ((m1TypeContext, m1Type), newType') = inferType' m1 newType
+      Just ((m2TypeContext, m2Type), newType'') = inferType' m2 newType'
+      m1TypeContextDomain = fst $ unzip m1TypeContext
+      m2TypeContextDomain = fst $ unzip m2TypeContext
       contextsDomainIntersect = Data.List.intersect m1TypeContextDomain m2TypeContextDomain
-      maybeTheta1Unification = unify m1TypeContext m2TypeContext contextsDomainIntersect
+      maybeTheta1Unification = unifyContexts m1TypeContext m2TypeContext contextsDomainIntersect
     in
       case maybeTheta1Unification of
         Nothing -> Nothing
         Just theta1Unification ->
           let
-            
-   --}   
+            m1TypeTheta1 = applyUnificatorToType theta1Unification m1Type
+            m2TypeTheta1 = applyUnificatorToType theta1Unification m2Type
+            maybeTheta2Unification = unifyTypes m1TypeTheta1 (FunType m2TypeTheta1 (VarType newType''))
+          in
+            case maybeTheta2Unification of
+              Nothing -> Nothing
+              Just theta2Unification ->
+                let
+                  m1TypeContext' = applyUnificatorToTypeContext theta1Unification m1TypeContext
+                  m2TypeContext' = applyUnificatorToTypeContext theta1Unification m2TypeContext
+                  m1TypeContext'' = applyUnificatorToTypeContext theta2Unification m1TypeContext'
+                  m2TypeContext'' = applyUnificatorToTypeContext theta2Unification m2TypeContext'
+                  m1m2TypeContextUnion = Data.List.nub (m1TypeContext'' ++ m2TypeContext'')
+                  appTypeTheta2Applied = applyUnificatorToType theta2Unification (VarType newType'')
+                in
+                  Just ((m1m2TypeContextUnion, appTypeTheta2Applied), newType'' + 1)
+
+
+inferType' (Abs x m) newType
+  | inferType' m 0 == Nothing = Nothing
+  | otherwise =
+    let
+      Just ((mTypeContext, mType), newType') = inferType' m newType
+    in
+      case lookup x mTypeContext of
+        Nothing -> Just ((mTypeContext, (FunType (VarType newType') mType)), newType' + 1)
+        Just xType -> Just (((deleteFromSet x mTypeContext), (FunType xType mType)), newType')
 
 showType :: LambdaTerm -> String
 showType term = case inferType term of
                  Nothing -> "term " ++ (show term) ++ " has no type!"
-                 Just (context, termType) -> (show term) ++ " : " ++ (show termType)
+                 Just (context, termType) -> (showContext context) ++ (show term) ++ " : " ++ (show termType)
 
+showContext :: TypeContext -> String
+showContext [] = ""
+showContext ((v, vt):vs) = v ++ " : " ++ (show vt) ++ "\n" ++ (showContext vs)
+
+printType :: LambdaTerm -> IO ()
+printType term = putStrLn $ showType term
 
 type TypeUnificator = [(VarTypeName, Type)]
 
@@ -133,6 +165,5 @@ applyUnificatorToTypeContext unif ((x,t):xs) =
   (x, newType):(applyUnificatorToTypeContext unif xs)
   where
     newType = applyUnificatorToType unif t
-
 
 
