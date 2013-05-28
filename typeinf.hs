@@ -2,9 +2,12 @@ module TypeInf where
 
 import Data.List
 
+-- type variables for now are just integers
 type VarTypeName = Int
+-- types are variable types or function types
 data Type = VarType VarTypeName | FunType Type Type
 
+-- instance of show to pretty print types
 instance (Show Type) where
   show (VarType x) = (show x)
   show (FunType (VarType x) (VarType y)) = (show x) ++ "->" ++ (show y)
@@ -12,13 +15,17 @@ instance (Show Type) where
   show (FunType t (VarType x)) = "(" ++ (show t) ++ ")->" ++ (show x)
   show (FunType t1 t2) = "(" ++ (show t1) ++ ")->(" ++ (show t2) ++ ")"
 
+-- comparing types for equality 
 instance (Eq Type) where
   VarType x == VarType y           = x == y
   FunType t1 t2 == FunType u1 u2   = t1 == u1 && t2 == u2
 
+-- lambda term variable names
 type VarName = String
+-- lambda terms are variables, applications or lambda abstractions
 data LambdaTerm = Var VarName | App LambdaTerm LambdaTerm | Abs VarName LambdaTerm
 
+-- instance of show to pretty print lambda terms
 instance (Show LambdaTerm) where
   show (Var m) = m
   show (App (Var x) (Var y)) = x ++ y
@@ -28,23 +35,29 @@ instance (Show LambdaTerm) where
   show (Abs x (Var y)) = "\\" ++ x ++ "." ++ y
   show (Abs x m) = "\\" ++ x ++ ".(" ++ (show m) ++ ")"
 
+-- type context is mapping from variable name to type
 type TypeContext = [(VarName, Type)]
+-- lambda term type info is type context + lambda term type
 type TermTypeInfo = (TypeContext, Type)
 
+-- main function to infering types of lambda terms
 inferType :: LambdaTerm -> Maybe TermTypeInfo
 inferType term =
   case inferType' term 1 of
     Just (result, _) -> Just result
     Nothing -> Nothing
 
-inferType' :: LambdaTerm -> Int -> Maybe (TermTypeInfo, Int)
+-- helper function to infering types of lambda terms (aware of fresh type variable generation)
+inferType' :: LambdaTerm -> VarTypeName -> Maybe (TermTypeInfo, VarTypeName)
 
+-- type infering of lambda variable
 inferType' (Var x) newType =
   let
     freshContext = [(x, typeOfX)]
     typeOfX = VarType newType
   in Just ((freshContext, typeOfX), newType + 1)
 
+-- type infering of lambda application
 inferType' (App m1 m2) newType
   | inferType' m1 0 == Nothing = Nothing
   | inferType' m2 0 == Nothing = Nothing
@@ -78,7 +91,7 @@ inferType' (App m1 m2) newType
                 in
                   Just ((m1m2TypeContextUnion, appTypeTheta2Applied), newType'' + 1)
 
-
+-- type infering of lambda abstraction
 inferType' (Abs x m) newType
   | inferType' m 0 == Nothing = Nothing
   | otherwise =
@@ -89,20 +102,25 @@ inferType' (Abs x m) newType
         Nothing -> Just ((mTypeContext, (FunType (VarType newType') mType)), newType' + 1)
         Just xType -> Just (((deleteFromSet x mTypeContext), (FunType xType mType)), newType')
 
+-- makes string with context and type of lambda term
 showType :: LambdaTerm -> String
 showType term = case inferType term of
                  Nothing -> "term " ++ (show term) ++ " has no type!"
                  Just (context, termType) -> (showContext context) ++ (show term) ++ " : " ++ (show termType)
 
+-- make string out of type context
 showContext :: TypeContext -> String
 showContext [] = ""
 showContext ((v, vt):vs) = v ++ " : " ++ (show vt) ++ "\n" ++ (showContext vs)
 
+-- print lambda term (with context also) to stdout
 printType :: LambdaTerm -> IO ()
 printType term = putStrLn $ showType term
 
+-- unificator is mapping from type variable to another type
 type TypeUnificator = [(VarTypeName, Type)]
 
+-- applying unificator to specified type 
 applyUnificatorToType :: TypeUnificator -> Type -> Type
 applyUnificatorToType unif (VarType x) =
   case lookup x unif of
@@ -111,6 +129,7 @@ applyUnificatorToType unif (VarType x) =
 applyUnificatorToType unif (FunType t1 t2) =
   FunType (applyUnificatorToType unif t1) (applyUnificatorToType unif t2)
 
+-- unification of two types may be successfull or not
 unifyTypes :: Type -> Type -> Maybe TypeUnificator
 unifyTypes (VarType x) (VarType y) | x == y = Just []
 unifyTypes (VarType x) t = Just [(x, t)]
@@ -124,9 +143,11 @@ unifyTypes (FunType t1 t2) (FunType u1 u2) =
     joinUnificators unif1 unif2
 unifyTypes _ _ = Nothing
 
+-- joining two unificators may be successfull or not
 joinUnificators :: TypeUnificator -> TypeUnificator -> Maybe TypeUnificator
 joinUnificators unif1 unif2 = joinUnificators' unif1 unif2 []
 
+-- helper function for joining two unificators
 joinUnificators' :: TypeUnificator -> TypeUnificator -> TypeUnificator -> Maybe TypeUnificator
 joinUnificators' [] unif acc = Just (unif ++ acc)
 joinUnificators' ((x,t):xs) unif acc
@@ -134,17 +155,21 @@ joinUnificators' ((x,t):xs) unif acc
   | lookup x unif == Just t = joinUnificators' xs (deleteFromSet x unif) ((x,t):(acc))
   | otherwise = Nothing
 
+-- function removing element for set represented as list of (key,value) pairs
 deleteFromSet :: Eq a => a -> [(a,b)] -> [(a,b)]
 deleteFromSet elem list = deleteFromSet' elem list []
 
+-- helper function for removing element from set (represented as above)
 deleteFromSet' :: Eq a => a -> [(a,b)] -> [(a,b)] -> [(a,b)]
 deleteFromSet' _ [] acc = acc
 deleteFromSet' key ((k,_):es) acc | key == k = es ++ acc
 deleteFromSet' key (e:es) acc = deleteFromSet' key es (e:acc)
 
+-- unifying type contexts in some domain may be successfull or not
 unifyContexts :: TypeContext -> TypeContext -> [VarName] -> Maybe TypeUnificator
 unifyContexts con1 con2 commonDomain = unifyContexts' con1 con2 commonDomain []
 
+-- helper function for unifying type contexts
 unifyContexts' :: TypeContext -> TypeContext -> [VarName] -> TypeUnificator -> Maybe TypeUnificator
 unifyContexts' con1 con2 [] acc = Just acc
 unifyContexts' con1 con2 (x:xs) acc =
@@ -159,6 +184,7 @@ unifyContexts' con1 con2 (x:xs) acc =
       con1' a = applyUnificatorToTypeContext a con1
       con2' a = applyUnificatorToTypeContext a con2
 
+-- applying unificator to type context produces new type context (with some types renamed)
 applyUnificatorToTypeContext :: TypeUnificator -> TypeContext -> TypeContext
 applyUnificatorToTypeContext _ [] = []
 applyUnificatorToTypeContext unif ((x,t):xs) =
