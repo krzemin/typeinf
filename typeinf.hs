@@ -110,8 +110,29 @@ deleteFromSet' _ [] acc = acc
 deleteFromSet' key ((k,_):es) acc | key == k = es ++ acc
 deleteFromSet' key (e:es) acc = deleteFromSet' key es (e:acc)
 
---unifyContexts :: TypeContext -> TypeContext -> [VarTypeName] -> TypeUnificator
---applyUnificatorToTypeContext :: TypeUnificator -> TypeContext -> TypeContext
+unifyContexts :: TypeContext -> TypeContext -> [VarName] -> Maybe TypeUnificator
+unifyContexts con1 con2 commonDomain = unifyContexts' con1 con2 commonDomain []
+
+unifyContexts' :: TypeContext -> TypeContext -> [VarName] -> TypeUnificator -> Maybe TypeUnificator
+unifyContexts' con1 con2 [] acc = Just acc
+unifyContexts' con1 con2 (x:xs) acc =
+  let
+    Just type1 = lookup x con1
+    Just type2 = lookup x con2
+  in
+    case unifyTypes type1 type2 of
+      Nothing -> Nothing
+      Just assign -> unifyContexts' (con1' assign) (con2' assign) xs (assign ++ acc)
+    where
+      con1' a = applyUnificatorToTypeContext a con1
+      con2' a = applyUnificatorToTypeContext a con2
+
+applyUnificatorToTypeContext :: TypeUnificator -> TypeContext -> TypeContext
+applyUnificatorToTypeContext _ [] = []
+applyUnificatorToTypeContext unif ((x,t):xs) =
+  (x, newType):(applyUnificatorToTypeContext unif xs)
+  where
+    newType = applyUnificatorToType unif t
 
 
 
