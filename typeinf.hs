@@ -132,7 +132,9 @@ applyUnificatorToType unif (FunType t1 t2) =
 -- unification of two types may be successfull or not
 unifyTypes :: Type -> Type -> Maybe TypeUnificator
 unifyTypes (VarType x) (VarType y) | x == y = Just []
-unifyTypes (VarType x) t = Just [(x, t)]
+unifyTypes (VarType x) t
+  | nameOccursInType x t = Nothing 
+  | otherwise = Just [(x, t)]
 unifyTypes (FunType t _) (FunType u _) | unifyTypes t u == Nothing = Nothing
 unifyTypes (FunType _ t) (FunType _ u) | unifyTypes t u == Nothing = Nothing
 unifyTypes (FunType t1 t2) (FunType u1 u2) =
@@ -142,6 +144,11 @@ unifyTypes (FunType t1 t2) (FunType u1 u2) =
   in
     joinUnificators unif1 unif2
 unifyTypes _ _ = Nothing
+
+-- checking whether type name is used in specified type
+nameOccursInType :: VarTypeName -> Type -> Bool
+nameOccursInType x (VarType y) = x == y
+nameOccursInType x (FunType t1 t2) = nameOccursInType x t1 || nameOccursInType x t2
 
 -- joining two unificators may be successfull or not
 joinUnificators :: TypeUnificator -> TypeUnificator -> Maybe TypeUnificator
