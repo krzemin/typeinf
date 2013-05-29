@@ -129,7 +129,7 @@ collectTypeNames = collectTypeNames' []
 collectTypeNames' :: [VarTypeName] -> Type -> [VarTypeName]
 collectTypeNames' acc (VarType x)
   | elem x acc = acc
-  | otherwise = (x:acc)
+  | otherwise = acc ++ [x]
 collectTypeNames' acc (FunType t1 t2) =
   let acc' = collectTypeNames' acc t1
   in  collectTypeNames' acc' t2
