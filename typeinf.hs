@@ -102,11 +102,45 @@ inferType' (Abs x m) newType
         Nothing -> Just ((mTypeContext, (FunType (VarType newType') mType)), newType' + 1)
         Just xType -> Just (((deleteFromSet x mTypeContext), (FunType xType mType)), newType')
 
+reenumerateTermTypeInfo :: TermTypeInfo -> TermTypeInfo
+reenumerateTermTypeInfo (context, termType) =
+  let
+    typeNamesFromCollection = collectTypeNames termType
+    typesFromContext = snd $ unzip context
+    allTypeNames = foldl collectTypeNames' typeNamesFromCollection typesFromContext
+    typeNamesAssignment = zip allTypeNames [1..]
+    context' = zip (fst $ unzip context) (map (assignTypeNames typeNamesAssignment) typesFromContext)
+    termType' = assignTypeNames typeNamesAssignment termType
+  in
+    (context', termType')
+
+assignTypeNames :: [(VarTypeName, VarTypeName)] -> Type -> Type
+assignTypeNames assignment (VarType x) = case lookup x assignment of
+  Just y -> VarType y
+  Nothing -> VarType x
+assignTypeNames assignment (FunType t1 t2) = FunType t1' t2'
+  where
+    t1' = assignTypeNames assignment t1
+    t2' = assignTypeNames assignment t2
+
+collectTypeNames :: Type -> [VarTypeName]
+collectTypeNames = collectTypeNames' []
+
+collectTypeNames' :: [VarTypeName] -> Type -> [VarTypeName]
+collectTypeNames' acc (VarType x)
+  | elem x acc = acc
+  | otherwise = (x:acc)
+collectTypeNames' acc (FunType t1 t2) =
+  let acc' = collectTypeNames' acc t1
+  in  collectTypeNames' acc' t2
+
 -- makes string with context and type of lambda term
 showType :: LambdaTerm -> String
 showType term = case inferType term of
-                 Nothing -> "term " ++ (show term) ++ " has no type!"
-                 Just (context, termType) -> (showContext context) ++ (show term) ++ " : " ++ (show termType)
+  Nothing -> "term " ++ (show term) ++ " has no type!"
+  Just (context, termType) -> (showContext context') ++ (show term) ++ " : " ++ (show termType')
+    where
+      (context', termType') = reenumerateTermTypeInfo (context, termType)
 
 -- make string out of type context
 showContext :: TypeContext -> String
