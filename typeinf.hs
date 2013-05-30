@@ -101,7 +101,6 @@ inferType' (App m1 m2) newType
             m1TypeTheta1 = applyUnificatorToType theta1Unification m1Type
             m2TypeTheta1 = applyUnificatorToType theta1Unification m2Type
             maybeTheta2Unification = unify [(m1TypeTheta1, (FunType m2TypeTheta1 (VarType newType'')))]
-            -- maybeTheta2Unification = unifyTypes m1TypeTheta1 (FunType m2TypeTheta1 (VarType newType''))
           in
             case maybeTheta2Unification of
               Nothing -> Nothing
@@ -132,6 +131,7 @@ inferType' (MultiAbs xs m) newType =
   let abs = multiAbsToAbs (MultiAbs xs m)
   in inferType' abs newType
 
+-- rename types to use adjacent names (starting from 1)
 reenumerateTermTypeInfo :: TermTypeInfo -> TermTypeInfo
 reenumerateTermTypeInfo (context, termType) =
   let
@@ -144,6 +144,7 @@ reenumerateTermTypeInfo (context, termType) =
   in
     (context', termType')
 
+-- applies type assignment to specified type
 assignTypeNames :: [(VarTypeName, VarTypeName)] -> Type -> Type
 assignTypeNames assignment (VarType x) = case lookup x assignment of
   Just y -> VarType y
@@ -153,6 +154,7 @@ assignTypeNames assignment (FunType t1 t2) = FunType t1' t2'
     t1' = assignTypeNames assignment t1
     t2' = assignTypeNames assignment t2
 
+-- gather type names existing in type
 collectTypeNames :: Type -> [VarTypeName]
 collectTypeNames = collectTypeNames' []
 
@@ -193,22 +195,6 @@ applyUnificatorToType unif (VarType x) =
 applyUnificatorToType unif (FunType t1 t2) =
   FunType (applyUnificatorToType unif t1) (applyUnificatorToType unif t2)
 
--- unification of two types may be successfull or not
-unifyTypes :: Type -> Type -> Maybe TypeUnificator
-unifyTypes (VarType x) (VarType y) | x == y = Just []
-unifyTypes (VarType x) t
-  | nameOccursInType x t = Nothing 
-  | otherwise = Just [(x, t)]
-unifyTypes (FunType t _) (FunType u _) | unifyTypes t u == Nothing = Nothing
-unifyTypes (FunType _ t) (FunType _ u) | unifyTypes t u == Nothing = Nothing
-unifyTypes (FunType t1 t2) (FunType u1 u2) =
-  let
-    Just unif1 = unifyTypes t1 u1
-    Just unif2 = unifyTypes t2 u2
-  in
-    joinUnificators unif1 unif2
-unifyTypes _ _ = Nothing
-
 -- checking whether type name is used in specified type
 nameOccursInType :: VarTypeName -> Type -> Bool
 nameOccursInType x (VarType y) = x == y
@@ -226,7 +212,7 @@ joinUnificators' ((x,t):xs) unif acc
   | lookup x unif == Just t = joinUnificators' xs (deleteFromSet x unif) ((x,t):(acc))
   | otherwise = Nothing
 
--- function removing element for set represented as list of (key,value) pairs
+-- removing element for set represented as list of (key,value) pairs
 deleteFromSet :: Eq a => a -> [(a,b)] -> [(a,b)]
 deleteFromSet elem list = deleteFromSet' elem list []
 
@@ -250,22 +236,6 @@ collectCommonDomain con1 con2 (x:xs) acc = collectCommonDomain con1 con2 xs acc'
     Just t2 = lookup x con2
     acc' = ((t1, t2):acc)
 
-
--- helper function for unifying type contexts
-unifyContexts' :: TypeContext -> TypeContext -> [VarName] -> TypeUnificator -> Maybe TypeUnificator
-unifyContexts' con1 con2 [] acc = Just acc
-unifyContexts' con1 con2 (x:xs) acc =
-  let
-    Just type1 = lookup x con1
-    Just type2 = lookup x con2
-  in
-    case unifyTypes type1 type2 of
-      Nothing -> Nothing
-      Just assign -> unifyContexts' (con1' assign) (con2' assign) xs (assign ++ acc)
-    where
-      con1' a = applyUnificatorToTypeContext a con1
-      con2' a = applyUnificatorToTypeContext a con2
-
 -- applying unificator to type context produces new type context (with some types renamed)
 applyUnificatorToTypeContext :: TypeUnificator -> TypeContext -> TypeContext
 applyUnificatorToTypeContext _ [] = []
@@ -274,9 +244,7 @@ applyUnificatorToTypeContext unif ((x,t):xs) =
   where
     newType = applyUnificatorToType unif t
 
-
 -- unification
-
 unify :: [(Type, Type)] -> Maybe TypeUnificator
 unify [] = Just []
 unify ((VarType x, VarType y):ts) | x == y = unify ts
@@ -289,11 +257,13 @@ unify ((VarType x, t):ts)
 unify ((t, VarType x):ts) = unify ((VarType x, t):ts)
 unify ((FunType t1 t2, FunType u1 u2):ts) = unify ((t1,u1):(t2,u2):ts)
 
+-- replaces type variable occurrences in specified list of pairs of types
 replaceVarInTypes :: VarTypeName -> Type -> [(Type, Type)] -> [(Type, Type)]
 replaceVarInTypes x t ts = map ureplace' ts
   where
     ureplace' (t1, t2) = (replaceVarInType x t t1, replaceVarInType x t t2)
 
+-- replaces type variable in specified type with given type
 replaceVarInType :: VarTypeName -> Type -> Type -> Type
 replaceVarInType x t (VarType y)
   | x == y = t
