@@ -100,7 +100,8 @@ inferType' (App m1 m2) newType
           let
             m1TypeTheta1 = applyUnificatorToType theta1Unification m1Type
             m2TypeTheta1 = applyUnificatorToType theta1Unification m2Type
-            maybeTheta2Unification = unifyTypes m1TypeTheta1 (FunType m2TypeTheta1 (VarType newType''))
+            maybeTheta2Unification = unify [(m1TypeTheta1, (FunType m2TypeTheta1 (VarType newType'')))]
+            -- maybeTheta2Unification = unifyTypes m1TypeTheta1 (FunType m2TypeTheta1 (VarType newType''))
           in
             case maybeTheta2Unification of
               Nothing -> Nothing
@@ -237,7 +238,18 @@ deleteFromSet' key (e:es) acc = deleteFromSet' key es (e:acc)
 
 -- unifying type contexts in some domain may be successfull or not
 unifyContexts :: TypeContext -> TypeContext -> [VarName] -> Maybe TypeUnificator
-unifyContexts con1 con2 commonDomain = unifyContexts' con1 con2 commonDomain []
+unifyContexts con1 con2 commonDomain = unify unifyInput
+  where
+    unifyInput = collectCommonDomain con1 con2 commonDomain []
+
+collectCommonDomain :: TypeContext -> TypeContext -> [VarName] -> [(Type, Type)] -> [(Type, Type)]
+collectCommonDomain _ _ [] acc = acc
+collectCommonDomain con1 con2 (x:xs) acc = collectCommonDomain con1 con2 xs acc'
+  where
+    Just t1 = lookup x con1
+    Just t2 = lookup x con2
+    acc' = ((t1, t2):acc)
+
 
 -- helper function for unifying type contexts
 unifyContexts' :: TypeContext -> TypeContext -> [VarName] -> TypeUnificator -> Maybe TypeUnificator
