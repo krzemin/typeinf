@@ -24,6 +24,16 @@ usage
     λx y.x : α->(β->α)
     *TypeInf> printType s
     λx y z.(x z) (y z) : (α->(β->γ))->(α->β)->α->γ
+    *TypeInf> let skk = (App (App s k) k)
+    *TypeInf> skk
+    ((λx y z.(x z) (y z)) (λx y.x)) (λx y.x)
+    *TypeInf> printType skk
+    ((λx y z.(x z) (y z)) (λx y.x)) (λx y.x) : α->α
+    *TypeInf> let ki = App k i
+    *TypeInf> ki
+    (λx y.x) (λx.x)
+    *TypeInf> printType ki
+    (λx y.x) (λx.x) : α->(β->β)
     *TypeInf> 
 
 
