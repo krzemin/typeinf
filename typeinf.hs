@@ -34,7 +34,7 @@ instance (Show LambdaTerm) where
   show (Var m) = m
   show (App (Var x) (Var y)) = x ++ " " ++ y
   show (App (Var x) m) = x ++ " (" ++ (show m) ++ ")"
-  show (App m (Var x)) = (show m) ++ " " ++ x
+  show (App m (Var x)) = "(" ++ (show m) ++ ") " ++ x
   show (App m1 m2) = "(" ++ (show m1) ++ ") (" ++ (show m2) ++ ")"
   show (Abs x (Var y)) = "\955" ++ x ++ "." ++ y
   show (Abs x m) = "\955" ++ x ++ "." ++ (show m)
@@ -46,6 +46,18 @@ multiAbsToAbs :: LambdaTerm -> LambdaTerm
 multiAbsToAbs (MultiAbs [x] m) = Abs x m
 multiAbsToAbs (MultiAbs (x:xs) m) = Abs x (multiAbsToAbs (MultiAbs xs m))
 multiAbsToAbs term = term
+
+-- rebuild normal abstraction tree and replaces possible abstractions with multi abstractions
+extractMultiAbs :: LambdaTerm -> LambdaTerm
+extractMultiAbs (App m n) = App (extractMultiAbs m) (extractMultiAbs n)
+extractMultiAbs (Abs x (Abs y m)) = case m of
+  (Abs _ _) ->
+    let MultiAbs ys m' = extractMultiAbs (Abs y m)
+    in  MultiAbs (x:ys) m'
+  otherwise -> MultiAbs [x,y] m
+extractMultiAbs term = term
+
+-- TODO: beta reduction rules
 
 -- type context is mapping from variable name to type
 type TypeContext = [(VarName, Type)]
