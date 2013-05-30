@@ -263,3 +263,32 @@ applyUnificatorToTypeContext unif ((x,t):xs) =
     newType = applyUnificatorToType unif t
 
 
+-- unification
+
+unify :: [(Type, Type)] -> Maybe TypeUnificator
+unify [] = Just []
+unify ((VarType x, VarType y):ts) | x == y = unify ts
+unify ((VarType x, t):ts)
+  | nameOccursInType x t = Nothing
+  | otherwise =
+    case unify (replaceVarInTypes x t ts) of
+      Nothing -> Nothing
+      Just unificator -> Just ((x, t):unificator)
+unify ((t, VarType x):ts) = unify ((VarType x, t):ts)
+unify ((FunType t1 t2, FunType u1 u2):ts) = unify ((t1,u1):(t2,u2):ts)
+
+replaceVarInTypes :: VarTypeName -> Type -> [(Type, Type)] -> [(Type, Type)]
+replaceVarInTypes x t ts = map ureplace' ts
+  where
+    ureplace' (t1, t2) = (replaceVarInType x t t1, replaceVarInType x t t2)
+
+replaceVarInType :: VarTypeName -> Type -> Type -> Type
+replaceVarInType x t (VarType y)
+  | x == y = t
+  | otherwise = (VarType y)
+replaceVarInType x t (FunType t1 t2) = (FunType t1' t2')
+  where
+    t1' = replaceVarInType x t t1
+    t2' = replaceVarInType x t t2
+
+

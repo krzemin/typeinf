@@ -26,3 +26,10 @@ usage
     λx y z.(x z) (y z) : (α->(β->γ))->(α->β)->α->γ
     *TypeInf> 
 
+
+todo
+====
+* parser
+* beta reduction
+* REPL environment
+
