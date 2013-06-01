@@ -147,3 +147,21 @@ typ input =
   let term = parseLambdaTerm input
   in printType term
 
+
+execCmd :: String -> IO ()
+execCmd "exit" = do return ()
+execCmd term = do
+  typ term
+  return ()
+
+main :: IO ()
+main = do
+  putStr "> "
+  cmd <- getLine
+  execCmd cmd
+  case cmd of
+    "exit" ->
+      return ()
+    otherwise ->
+      main
+
