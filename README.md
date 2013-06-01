@@ -6,40 +6,28 @@ Simply-typed lambda calculus type inferer
 usage
 =====
 
-    ghci typeinf.hs
-    *TypeInf> let i = (Abs "x" (Var "x"))
-    *TypeInf> i
-    λx.x
-    *TypeInf> let k = (MultiAbs ["x","y"] (Var "x"))
-    *TypeInf> k
-    λx y.x
-    *TypeInf> let xz = (App (Var "x") (Var "z"))
-    *TypeInf> let yz = (App (Var "y") (Var "z"))
-    *TypeInf> let s = MultiAbs ["x","y","z"] (App xz yz)
-    *TypeInf> s
-    λx y z.(x z) (y z)
-    *TypeInf> printType i
-    λx.x : α->α
-    *TypeInf> printType k
+    ghci TypeInf.hs 
+    *TypeInf> let i = "(\\x.x)"
+    *TypeInf> let k = "(\\x y.x)"
+    *TypeInf> let s = "(\\x y z.x z (y z))"
+    *TypeInf> typ i
+    x.x : α->α
+    *TypeInf> typ k
     λx y.x : α->(β->α)
-    *TypeInf> printType s
+    *TypeInf> typ s
     λx y z.(x z) (y z) : (α->(β->γ))->(α->β)->α->γ
-    *TypeInf> let skk = (App (App s k) k)
+    *TypeInf> let skk = s++k++k
     *TypeInf> skk
+    "(\\x y z.x z (y z))(\\x y.x)(\\x y.x)"
+    *TypeInf> parseLambdaTerm skk
     ((λx y z.(x z) (y z)) (λx y.x)) (λx y.x)
-    *TypeInf> printType skk
+    *TypeInf> typ skk
     ((λx y z.(x z) (y z)) (λx y.x)) (λx y.x) : α->α
-    *TypeInf> let ki = App k i
-    *TypeInf> ki
-    (λx y.x) (λx.x)
-    *TypeInf> printType ki
+    *TypeInf> typ (k++i)
     (λx y.x) (λx.x) : α->(β->β)
-    *TypeInf> 
-
-
-todo
-====
-* parser
-* beta reduction
-* REPL environment
+    *TypeInf> typ (s++i++i)
+    term ((λx y z.(x z) (y z)) (λx.x)) (λx.x) has no type!
+    *TypeInf> typ "\\x y.y(\\z.z(y x))"
+    λx y.y (λz.z (y x)) : ((α->β)->β)->(((α->β)->β)->γ)->γ
+    *TypeInf>
 
