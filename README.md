@@ -11,7 +11,7 @@ usage
     *TypeInf> let k = "(\\x y.x)"
     *TypeInf> let s = "(\\x y z.x z (y z))"
     *TypeInf> typ i
-    x.x : α->α
+    λx.x : α->α
     *TypeInf> typ k
     λx y.x : α->(β->α)
     *TypeInf> typ s
