@@ -1,45 +1,10 @@
 module TypeInf where
 
 import Data.List
-import Data.Char
+import TypeDefs
+import LambdaParser
+import Unification
 
--- type variables for now are just integers
-type VarTypeName = Int
--- types are variable types or function types
-data Type = VarType VarTypeName | FunType Type Type
-
--- instance of show to pretty print types
-instance (Show Type) where
-  show (VarType x) = [chr (944 + x)]
-  show (FunType (VarType x) (VarType y)) = (show (VarType x)) ++ "->" ++ (show (VarType y))
-  show (FunType (VarType x) t) = (show (VarType x)) ++ "->(" ++ (show t) ++ ")"
-  show (FunType t (VarType x)) = "(" ++ (show t) ++ ")->" ++ (show (VarType x))
-  show (FunType t1 t2) = "(" ++ (show t1) ++ ")->" ++ (show t2)
-
--- comparing types for equality 
-instance (Eq Type) where
-  VarType x == VarType y           = x == y
-  FunType t1 t2 == FunType u1 u2   = t1 == u1 && t2 == u2
-
--- lambda term variable names
-type VarName = String
--- lambda terms are variables, applications or lambda abstractions
-data LambdaTerm = Var VarName |
-                  App LambdaTerm LambdaTerm |
-                  Abs VarName LambdaTerm |
-                  MultiAbs [VarName] LambdaTerm
-
--- instance of show to pretty print lambda terms
-instance (Show LambdaTerm) where
-  show (Var m) = m
-  show (App (Var x) (Var y)) = x ++ " " ++ y
-  show (App (Var x) m) = x ++ " (" ++ (show m) ++ ")"
-  show (App m (Var x)) = "(" ++ (show m) ++ ") " ++ x
-  show (App m1 m2) = "(" ++ (show m1) ++ ") (" ++ (show m2) ++ ")"
-  show (Abs x (Var y)) = "\955" ++ x ++ "." ++ y
-  show (Abs x m) = "\955" ++ x ++ "." ++ (show m)
-  show (MultiAbs [x] m) = show (Abs x m)
-  show (MultiAbs xs m) = "\955" ++ (drop 1 $ foldl (\a b -> a ++ " " ++ b) "" xs) ++ "." ++ (show m) 
 
 -- rebuild multi abstraction as normal abstraction tree
 multiAbsToAbs :: LambdaTerm -> LambdaTerm
@@ -56,13 +21,6 @@ extractMultiAbs (Abs x (Abs y m)) = case m of
     in  MultiAbs (x:ys) m'
   otherwise -> MultiAbs [x,y] m
 extractMultiAbs term = term
-
--- TODO: beta reduction rules
-
--- type context is mapping from variable name to type
-type TypeContext = [(VarName, Type)]
--- lambda term type info is type context + lambda term type
-type TermTypeInfo = (TypeContext, Type)
 
 -- main function to infering types of lambda terms
 inferType :: LambdaTerm -> Maybe TermTypeInfo
@@ -183,94 +141,9 @@ showContext ((v, vt):vs) = v ++ " : " ++ (show vt) ++ "\n" ++ (showContext vs)
 printType :: LambdaTerm -> IO ()
 printType term = putStrLn $ showType term
 
--- unificator is mapping from type variable to another type
-type TypeUnificator = [(VarTypeName, Type)]
-
--- applying unificator to specified type 
-applyUnificatorToType :: TypeUnificator -> Type -> Type
-applyUnificatorToType unif (VarType x) =
-  case lookup x unif of
-    Nothing -> (VarType x)
-    Just typeAssignment -> typeAssignment
-applyUnificatorToType unif (FunType t1 t2) =
-  FunType (applyUnificatorToType unif t1) (applyUnificatorToType unif t2)
-
--- checking whether type name is used in specified type
-nameOccursInType :: VarTypeName -> Type -> Bool
-nameOccursInType x (VarType y) = x == y
-nameOccursInType x (FunType t1 t2) = nameOccursInType x t1 || nameOccursInType x t2
-
--- joining two unificators may be successfull or not
-joinUnificators :: TypeUnificator -> TypeUnificator -> Maybe TypeUnificator
-joinUnificators unif1 unif2 = joinUnificators' unif1 unif2 []
-
--- helper function for joining two unificators
-joinUnificators' :: TypeUnificator -> TypeUnificator -> TypeUnificator -> Maybe TypeUnificator
-joinUnificators' [] unif acc = Just (unif ++ acc)
-joinUnificators' ((x,t):xs) unif acc
-  | lookup x unif == Nothing = joinUnificators' xs unif ((x,t):(acc))
-  | lookup x unif == Just t = joinUnificators' xs (deleteFromSet x unif) ((x,t):(acc))
-  | otherwise = Nothing
-
--- removing element for set represented as list of (key,value) pairs
-deleteFromSet :: Eq a => a -> [(a,b)] -> [(a,b)]
-deleteFromSet elem list = deleteFromSet' elem list []
-
--- helper function for removing element from set (represented as above)
-deleteFromSet' :: Eq a => a -> [(a,b)] -> [(a,b)] -> [(a,b)]
-deleteFromSet' _ [] acc = acc
-deleteFromSet' key ((k,_):es) acc | key == k = es ++ acc
-deleteFromSet' key (e:es) acc = deleteFromSet' key es (e:acc)
-
--- unifying type contexts in some domain may be successfull or not
-unifyContexts :: TypeContext -> TypeContext -> [VarName] -> Maybe TypeUnificator
-unifyContexts con1 con2 commonDomain = unify unifyInput
-  where
-    unifyInput = collectCommonDomain con1 con2 commonDomain []
-
-collectCommonDomain :: TypeContext -> TypeContext -> [VarName] -> [(Type, Type)] -> [(Type, Type)]
-collectCommonDomain _ _ [] acc = acc
-collectCommonDomain con1 con2 (x:xs) acc = collectCommonDomain con1 con2 xs acc'
-  where
-    Just t1 = lookup x con1
-    Just t2 = lookup x con2
-    acc' = ((t1, t2):acc)
-
--- applying unificator to type context produces new type context (with some types renamed)
-applyUnificatorToTypeContext :: TypeUnificator -> TypeContext -> TypeContext
-applyUnificatorToTypeContext _ [] = []
-applyUnificatorToTypeContext unif ((x,t):xs) =
-  (x, newType):(applyUnificatorToTypeContext unif xs)
-  where
-    newType = applyUnificatorToType unif t
-
--- unification
-unify :: [(Type, Type)] -> Maybe TypeUnificator
-unify [] = Just []
-unify ((VarType x, VarType y):ts) | x == y = unify ts
-unify ((VarType x, t):ts)
-  | nameOccursInType x t = Nothing
-  | otherwise =
-    case unify (replaceVarInTypes x t ts) of
-      Nothing -> Nothing
-      Just unificator -> Just ((x, t):unificator)
-unify ((t, VarType x):ts) = unify ((VarType x, t):ts)
-unify ((FunType t1 t2, FunType u1 u2):ts) = unify ((t1,u1):(t2,u2):ts)
-
--- replaces type variable occurrences in specified list of pairs of types
-replaceVarInTypes :: VarTypeName -> Type -> [(Type, Type)] -> [(Type, Type)]
-replaceVarInTypes x t ts = map ureplace' ts
-  where
-    ureplace' (t1, t2) = (replaceVarInType x t t1, replaceVarInType x t t2)
-
--- replaces type variable in specified type with given type
-replaceVarInType :: VarTypeName -> Type -> Type -> Type
-replaceVarInType x t (VarType y)
-  | x == y = t
-  | otherwise = (VarType y)
-replaceVarInType x t (FunType t1 t2) = (FunType t1' t2')
-  where
-    t1' = replaceVarInType x t t1
-    t2' = replaceVarInType x t t2
-
+-- parse input and print type
+typ :: String -> IO ()
+typ input =
+  let term = parseLambdaTerm input
+  in printType term
 
