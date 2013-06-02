@@ -1,5 +1,6 @@
 module Unification where
 
+import Prelude
 import TypeDefs
 
 -- unificator is mapping from type variable to another type

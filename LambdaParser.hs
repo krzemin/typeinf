@@ -1,5 +1,6 @@
 module LambdaParser where
 
+import Prelude
 import Text.Parsec
 import Text.Parsec.String (Parser)
 import qualified Text.Parsec.Token as Tok

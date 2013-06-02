@@ -1,5 +1,6 @@
 module TypeDefs where
 
+import Prelude
 import Data.Char
 
 -- type variables for now are just integers
@@ -8,7 +9,7 @@ type VarTypeName = Int
 data Type = VarType VarTypeName | FunType Type Type deriving Eq
 
 -- instance of show to pretty print types
-instance (Show Type) where
+instance Show Type where
   show (VarType x) = [chr (944 + x)]
   show (FunType (VarType x) (VarType y)) = (show (VarType x)) ++ "->" ++ (show (VarType y))
   show (FunType (VarType x) t) = (show (VarType x)) ++ "->(" ++ (show t) ++ ")"
@@ -24,7 +25,7 @@ data LambdaTerm = Var VarName |
                   MultiAbs [VarName] LambdaTerm
 
 -- instance of show to pretty print lambda terms
-instance (Show LambdaTerm) where
+instance Show LambdaTerm where
   show (Var m) = m
   show (App (Var x) (Var y)) = x ++ " " ++ y
   show (App (Var x) m) = x ++ " (" ++ (show m) ++ ")"

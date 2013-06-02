@@ -1,5 +1,6 @@
 module TypeInf where
 
+import Prelude
 import Data.List
 import TypeDefs
 import LambdaParser
@@ -124,18 +125,36 @@ collectTypeNames' acc (FunType t1 t2) =
   let acc' = collectTypeNames' acc t1
   in  collectTypeNames' acc' t2
 
--- makes string with context and type of lambda term
-showType :: LambdaTerm -> String
-showType term = case inferType term of
-  Nothing -> "term " ++ (show term) ++ " has no type!"
-  Just (context, termType) -> (showContext context') ++ (show term) ++ " : " ++ (show termType')
+-- return pair of strings: description of context and term
+showContextAndType :: LambdaTerm -> (String, String)
+showContextAndType term = case inferType term of
+  Nothing -> ("", "term " ++ (show term) ++ " has no type!")
+  Just (context, termType) -> (showContext context', (show term) ++ " : " ++ (show termType'))
     where
       (context', termType') = reenumerateTermTypeInfo (context, termType)
+
+
+parseAndShowContextAndType :: String -> (String, String)
+parseAndShowContextAndType input =
+  let term = parseLambdaTerm input
+  in showContextAndType term
+
+-- makes string with context and type of lambda term
+showType :: LambdaTerm -> String
+showType term = contextStr ++ typeStr
+  where
+    (contextStr, typeStr) = showContextAndType term
 
 -- make string out of type context
 showContext :: TypeContext -> String
 showContext [] = ""
 showContext ((v, vt):vs) = v ++ " : " ++ (show vt) ++ "\n" ++ (showContext vs)
+
+-- parse input and return type info as a string
+parseAndShowType :: String -> String
+parseAndShowType input =
+  let term = parseLambdaTerm input
+  in showType term
 
 -- print lambda term (with context also) to stdout
 printType :: LambdaTerm -> IO ()
@@ -147,7 +166,7 @@ typ input =
   let term = parseLambdaTerm input
   in printType term
 
-
+-- executes a command
 execCmd :: String -> IO ()
 execCmd "exit" = do return ()
 execCmd term = do
