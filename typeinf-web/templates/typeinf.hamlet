@@ -1,0 +1,5 @@
+<h1> Enter lambda term
+<form method=post action=@{TypeInfererR} class=input-xxlarge>
+  <input type=text name=lambdaTerm>
+  <input type=submit class=btn-primary>
+
