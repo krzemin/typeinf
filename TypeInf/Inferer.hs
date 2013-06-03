@@ -1,10 +1,10 @@
-module TypeInf.TypeInf where
+module TypeInf.Inferer where
 
 import Prelude
 import Data.List
 import Data.Maybe
 import TypeInf.TypeDefs
-import TypeInf.LambdaParser
+import TypeInf.Parser
 import TypeInf.Unification
 
 

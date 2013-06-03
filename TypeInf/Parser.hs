@@ -1,4 +1,4 @@
-module TypeInf.LambdaParser where
+module TypeInf.Parser where
 
 import Prelude
 import Text.Parsec

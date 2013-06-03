@@ -13,17 +13,18 @@ Flag library-only
     Default:       False
 
 library
-    exposed-modules: Application
-                     Foundation
-                     Import
-                     Settings
-                     Settings.StaticFiles
-                     Settings.Development
-                     Handler.TypeInferer
-                     TypeInf.TypeInf
-                     TypeInf.TypeDefs
-                     TypeInf.LambdaParser
-                     TypeInf.Unification
+    exposed-modules: 
+                     Application,
+                     Foundation,
+                     Import,
+                     Settings,
+                     Settings.StaticFiles,
+                     Settings.Development,
+                     Handler.TypeInferer,
+                     TypeInf.TypeDefs,
+                     TypeInf.Unification,
+                     TypeInf.Inferer,
+                     TypeInf.Parser
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
