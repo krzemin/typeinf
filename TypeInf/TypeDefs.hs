@@ -1,4 +1,4 @@
-module TypeDefs where
+module TypeInf.TypeDefs where
 
 import Prelude
 import Data.Char

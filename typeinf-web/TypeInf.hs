@@ -1,1 +1,0 @@
-../TypeInf.hs

@@ -1,4 +1,4 @@
-exec: ../dist/build/typeinf-web/typeinf-web
+exec: ../dist/build/typeinf/typeinf
 args:
     - production
 host: <<HOST-NOT-SET>>

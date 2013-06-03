@@ -1,4 +1,4 @@
-module LambdaParser where
+module TypeInf.LambdaParser where
 
 import Prelude
 import Text.Parsec
@@ -6,8 +6,7 @@ import Text.Parsec.String (Parser)
 import qualified Text.Parsec.Token as Tok
 import qualified Text.Parsec.Expr as Ex
 import Text.Parsec.Language (haskellDef)
-
-import TypeDefs
+import TypeInf.TypeDefs
 
 lexer :: Tok.TokenParser ()
 lexer = Tok.makeTokenParser style

@@ -1,10 +1,10 @@
-module TypeInf where
+module TypeInf.TypeInf where
 
 import Prelude
 import Data.List
-import TypeDefs
-import LambdaParser
-import Unification
+import TypeInf.TypeDefs
+import TypeInf.LambdaParser
+import TypeInf.Unification
 
 
 -- rebuild multi abstraction as normal abstraction tree

@@ -1,7 +1,7 @@
-module Unification where
+module TypeInf.Unification where
 
 import Prelude
-import TypeDefs
+import TypeInf.TypeDefs
 
 -- unificator is mapping from type variable to another type
 type TypeUnificator = [(VarTypeName, Type)]

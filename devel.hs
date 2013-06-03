@@ -1,5 +1,5 @@
 {-# LANGUAGE PackageImports #-}
-import "typeinf-web" Application (getApplicationDev)
+import "typeinf" Application (getApplicationDev)
 import Network.Wai.Handler.Warp
     (runSettings, defaultSettings, settingsPort)
 import Control.Concurrent (forkIO)
