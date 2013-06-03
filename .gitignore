@@ -6,3 +6,12 @@ cabal-dev
 *.chs.h
 .virthualenv
 .*.swp
+.dist-buildwrapper
+META-INF
+.settings
+SourceGraph
+src
+.project
+build.properties
+Setup.hs
+yesod-devel

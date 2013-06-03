@@ -10,7 +10,7 @@ import Yesod.Test
 import Test.Hspec (hspec)
 import Application (makeFoundation)
 
-import HomeTest
+--import HomeTest
 
 main :: IO ()
 main = do
@@ -18,6 +18,4 @@ main = do
                 { csParseExtra = parseExtra
                 }
     foundation <- makeFoundation conf
-    hspec $ do
-        yesodSpec foundation $ do
-            homeSpecs
+    hspec $ yesodSpec foundation $ return ()
