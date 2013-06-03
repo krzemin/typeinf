@@ -15,5 +15,5 @@ Staging:
   <<: *defaults
 
 Production:
-  approot: "http://typeinf.heroku.com"
+  approot: "http://typeinf.herokuapp.com"
   <<: *defaults
