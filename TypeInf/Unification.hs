@@ -1,6 +1,7 @@
 module TypeInf.Unification where
 
 import Prelude
+import Data.Maybe
 import TypeInf.TypeDefs
 
 -- unificator is mapping from type variable to another type
@@ -9,9 +10,7 @@ type TypeUnificator = [(VarTypeName, Type)]
 -- applying unificator to specified type 
 applyUnificatorToType :: TypeUnificator -> Type -> Type
 applyUnificatorToType unif (VarType x) =
-  case lookup x unif of
-    Nothing -> (VarType x)
-    Just typeAssignment -> typeAssignment
+  fromMaybe (VarType x) $ lookup x unif
 applyUnificatorToType unif (FunType t1 t2) =
   FunType (applyUnificatorToType unif t1) (applyUnificatorToType unif t2)
 
@@ -28,13 +27,13 @@ joinUnificators unif1 unif2 = joinUnificators' unif1 unif2 []
 joinUnificators' :: TypeUnificator -> TypeUnificator -> TypeUnificator -> Maybe TypeUnificator
 joinUnificators' [] unif acc = Just (unif ++ acc)
 joinUnificators' ((x,t):xs) unif acc
-  | lookup x unif == Nothing = joinUnificators' xs unif ((x,t):(acc))
-  | lookup x unif == Just t = joinUnificators' xs (deleteFromSet x unif) ((x,t):(acc))
+  | isNothing $ lookup x unif = joinUnificators' xs unif ((x,t):acc)
+  | lookup x unif == Just t = joinUnificators' xs (deleteFromSet x unif) ((x,t):acc)
   | otherwise = Nothing
 
 -- removing element for set represented as list of (key,value) pairs
 deleteFromSet :: Eq a => a -> [(a,b)] -> [(a,b)]
-deleteFromSet elem list = deleteFromSet' elem list []
+deleteFromSet keyToRemove = filter (\(key, _) -> key /= keyToRemove)
 
 -- helper function for removing element from set (represented as above)
 deleteFromSet' :: Eq a => a -> [(a,b)] -> [(a,b)] -> [(a,b)]
@@ -54,13 +53,13 @@ collectCommonDomain con1 con2 (x:xs) acc = collectCommonDomain con1 con2 xs acc'
   where
     Just t1 = lookup x con1
     Just t2 = lookup x con2
-    acc' = ((t1, t2):acc)
+    acc' = (t1, t2):acc
 
 -- applying unificator to type context produces new type context (with some types renamed)
 applyUnificatorToTypeContext :: TypeUnificator -> TypeContext -> TypeContext
 applyUnificatorToTypeContext _ [] = []
 applyUnificatorToTypeContext unif ((x,t):xs) =
-  (x, newType):(applyUnificatorToTypeContext unif xs)
+  (x, newType):applyUnificatorToTypeContext unif xs
   where
     newType = applyUnificatorToType unif t
 
@@ -79,7 +78,7 @@ unify ((FunType t1 t2, FunType u1 u2):ts) = unify ((t1,u1):(t2,u2):ts)
 
 -- replaces type variable occurrences in specified list of pairs of types
 replaceVarInTypes :: VarTypeName -> Type -> [(Type, Type)] -> [(Type, Type)]
-replaceVarInTypes x t ts = map ureplace' ts
+replaceVarInTypes x t = map ureplace'
   where
     ureplace' (t1, t2) = (replaceVarInType x t t1, replaceVarInType x t t2)
 
@@ -87,8 +86,8 @@ replaceVarInTypes x t ts = map ureplace' ts
 replaceVarInType :: VarTypeName -> Type -> Type -> Type
 replaceVarInType x t (VarType y)
   | x == y = t
-  | otherwise = (VarType y)
-replaceVarInType x t (FunType t1 t2) = (FunType t1' t2')
+  | otherwise = VarType y
+replaceVarInType x t (FunType t1 t2) = FunType t1' t2'
   where
     t1' = replaceVarInType x t t1
     t2' = replaceVarInType x t t2

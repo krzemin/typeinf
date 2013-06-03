@@ -2,6 +2,7 @@ module TypeInf.TypeInf where
 
 import Prelude
 import Data.List
+import Data.Maybe
 import TypeInf.TypeDefs
 import TypeInf.LambdaParser
 import TypeInf.Unification
@@ -11,7 +12,7 @@ import TypeInf.Unification
 multiAbsToAbs :: LambdaTerm -> LambdaTerm
 multiAbsToAbs (MultiAbs [x] m) = Abs x m
 multiAbsToAbs (MultiAbs (x:xs) m) = Abs x (multiAbsToAbs (MultiAbs xs m))
-multiAbsToAbs term = term
+multiAbsToAbs lambdaTerm = lambdaTerm
 
 -- rebuild normal abstraction tree and replaces possible abstractions with multi abstractions
 extractMultiAbs :: LambdaTerm -> LambdaTerm
@@ -20,13 +21,13 @@ extractMultiAbs (Abs x (Abs y m)) = case m of
   (Abs _ _) ->
     let MultiAbs ys m' = extractMultiAbs (Abs y m)
     in  MultiAbs (x:ys) m'
-  otherwise -> MultiAbs [x,y] m
-extractMultiAbs term = term
+  _ -> MultiAbs [x,y] m
+extractMultiAbs lambdaTerm = lambdaTerm
 
 -- main function to infering types of lambda terms
 inferType :: LambdaTerm -> Maybe TermTypeInfo
-inferType term =
-  case inferType' term 1 of
+inferType lambdaTerm =
+  case inferType' lambdaTerm 1 of
     Just (result, _) -> Just result
     Nothing -> Nothing
 
@@ -42,8 +43,8 @@ inferType' (Var x) newType =
 
 -- type infering of lambda application
 inferType' (App m1 m2) newType
-  | inferType' m1 0 == Nothing = Nothing
-  | inferType' m2 0 == Nothing = Nothing
+  | isNothing $ inferType' m1 0 = Nothing
+  | isNothing $ inferType' m2 0 = Nothing
   | otherwise =
     let
       Just ((m1TypeContext, m1Type), newType') = inferType' m1 newType
@@ -59,7 +60,7 @@ inferType' (App m1 m2) newType
           let
             m1TypeTheta1 = applyUnificatorToType theta1Unification m1Type
             m2TypeTheta1 = applyUnificatorToType theta1Unification m2Type
-            maybeTheta2Unification = unify [(m1TypeTheta1, (FunType m2TypeTheta1 (VarType newType'')))]
+            maybeTheta2Unification = unify [(m1TypeTheta1, FunType m2TypeTheta1 (VarType newType''))]
           in
             case maybeTheta2Unification of
               Nothing -> Nothing
@@ -76,19 +77,19 @@ inferType' (App m1 m2) newType
 
 -- type infering of lambda abstraction
 inferType' (Abs x m) newType
-  | inferType' m 0 == Nothing = Nothing
+  | isNothing $ inferType' m 0 = Nothing
   | otherwise =
     let
       Just ((mTypeContext, mType), newType') = inferType' m newType
     in
       case lookup x mTypeContext of
-        Nothing -> Just ((mTypeContext, (FunType (VarType newType') mType)), newType' + 1)
-        Just xType -> Just (((deleteFromSet x mTypeContext), (FunType xType mType)), newType')
+        Nothing -> Just ((mTypeContext, FunType (VarType newType') mType), newType' + 1)
+        Just xType -> Just ((deleteFromSet x mTypeContext, FunType xType mType), newType')
 
 -- type infering of multi abstraction is rebuilding it as normal abstraction first
 inferType' (MultiAbs xs m) newType =
-  let abs = multiAbsToAbs (MultiAbs xs m)
-  in inferType' abs newType
+  let normalAbstraction = multiAbsToAbs (MultiAbs xs m)
+  in inferType' normalAbstraction newType
 
 -- rename types to use adjacent names (starting from 1)
 reenumerateTermTypeInfo :: TermTypeInfo -> TermTypeInfo
@@ -119,7 +120,7 @@ collectTypeNames = collectTypeNames' []
 
 collectTypeNames' :: [VarTypeName] -> Type -> [VarTypeName]
 collectTypeNames' acc (VarType x)
-  | elem x acc = acc
+  | x `elem` acc = acc
   | otherwise = acc ++ [x]
 collectTypeNames' acc (FunType t1 t2) =
   let acc' = collectTypeNames' acc t1
@@ -127,50 +128,50 @@ collectTypeNames' acc (FunType t1 t2) =
 
 -- return pair of strings: description of context and term
 showContextAndType :: LambdaTerm -> (String, String)
-showContextAndType term = case inferType term of
-  Nothing -> ("", "term " ++ (show term) ++ " has no type!")
-  Just (context, termType) -> (showContext context', (show term) ++ " : " ++ (show termType'))
+showContextAndType lambdaTerm = case inferType lambdaTerm of
+  Nothing -> ("", "term " ++ show lambdaTerm ++ " has no type!")
+  Just (context, termType) -> (showContext context', show lambdaTerm ++ " : " ++ show termType')
     where
       (context', termType') = reenumerateTermTypeInfo (context, termType)
 
 
 parseAndShowContextAndType :: String -> (String, String)
 parseAndShowContextAndType input =
-  let term = parseLambdaTerm input
-  in showContextAndType term
+  let lambdaTerm = parseLambdaTerm input
+  in showContextAndType lambdaTerm
 
 -- makes string with context and type of lambda term
 showType :: LambdaTerm -> String
-showType term = contextStr ++ typeStr
+showType lambdaTerm = contextStr ++ typeStr
   where
-    (contextStr, typeStr) = showContextAndType term
+    (contextStr, typeStr) = showContextAndType lambdaTerm
 
 -- make string out of type context
 showContext :: TypeContext -> String
 showContext [] = ""
-showContext ((v, vt):vs) = v ++ " : " ++ (show vt) ++ "\n" ++ (showContext vs)
+showContext ((v, vt):vs) = v ++ " : " ++ show vt ++ "\n" ++ showContext vs
 
 -- parse input and return type info as a string
 parseAndShowType :: String -> String
 parseAndShowType input =
-  let term = parseLambdaTerm input
-  in showType term
+  let lambdaTerm = parseLambdaTerm input
+  in showType lambdaTerm
 
 -- print lambda term (with context also) to stdout
 printType :: LambdaTerm -> IO ()
-printType term = putStrLn $ showType term
+printType lambdaTerm = putStrLn $ showType lambdaTerm
 
 -- parse input and print type
 typ :: String -> IO ()
 typ input =
-  let term = parseLambdaTerm input
-  in printType term
+  let lambdaTerm = parseLambdaTerm input
+  in printType lambdaTerm
 
 -- executes a command
 execCmd :: String -> IO ()
-execCmd "exit" = do return ()
-execCmd term = do
-  typ term
+execCmd "exit" = return ()
+execCmd lambdaTerm = do
+  typ lambdaTerm
   return ()
 
 main :: IO ()
@@ -181,6 +182,6 @@ main = do
   case cmd of
     "exit" ->
       return ()
-    otherwise ->
+    _ ->
       main
 
