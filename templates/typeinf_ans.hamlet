@@ -1,7 +1,7 @@
 <h1> Enter lambda term
 <form method=post action=@{TypeInfererR}>
-  <input type=text name=lambdaTerm value=#{lambdaTermStr} class=input-xxlarge>
-  <input type=submit class=btn-primary>
+  <input type=text name=lambdaTerm value=#{lambdaTermStr} .input-xxlarge>
+  <input type=submit .btn-primary>
 
 <h2> term type
 <pre>#{typeStr}

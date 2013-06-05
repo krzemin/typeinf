@@ -29,6 +29,7 @@ $newline never
               ^{pageBody pc}
             <footer>
                 #{extraCopyright $ appExtra $ settings master}
+                &nbsp;Powered by <a href="http://github.com/krzemin/typeinf">typeinf</a>.
 
         $maybe analytics <- extraAnalytics $ appExtra $ settings master
             <script>
