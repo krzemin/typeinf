@@ -6,7 +6,7 @@ Simply-typed lambda calculus type inferer
 usage
 =====
 
-    ghci TypeInf/TypeInf.hs 
+    ghci TypeInf/Inferer.hs 
     *TypeInf> let i = "(\\x.x)"
     *TypeInf> let k = "(\\x y.x)"
     *TypeInf> let s = "(\\x y z.x z (y z))"
