@@ -40,23 +40,14 @@ varlist = many1 identifier
 lambda :: Parser LambdaTerm
 lambda = do
   reservedOp "\\"
-  x <- identifier
-  reservedOp "."
-  e <- expr
-  return (Abs x e)
-
-mlambda :: Parser LambdaTerm
-mlambda = do
-  reservedOp "\\"
   xs <- varlist
   reservedOp "."
   e <- expr
-  return (MultiAbs xs e)
+  return (Abs xs e)
 
 factor :: Parser LambdaTerm
 factor =  parens expr
       <|> variable
-      <|> mlambda
       <|> lambda
       <?> "lambda term"
 

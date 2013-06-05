@@ -7,23 +7,6 @@ import TypeInf.TypeDefs
 import TypeInf.Parser
 import TypeInf.Unification
 
-
--- rebuild multi abstraction as normal abstraction tree
-multiAbsToAbs :: LambdaTerm -> LambdaTerm
-multiAbsToAbs (MultiAbs [x] m) = Abs x m
-multiAbsToAbs (MultiAbs (x:xs) m) = Abs x (multiAbsToAbs (MultiAbs xs m))
-multiAbsToAbs lambdaTerm = lambdaTerm
-
--- rebuild normal abstraction tree and replaces possible abstractions with multi abstractions
-extractMultiAbs :: LambdaTerm -> LambdaTerm
-extractMultiAbs (App m n) = App (extractMultiAbs m) (extractMultiAbs n)
-extractMultiAbs (Abs x (Abs y m)) = case m of
-  (Abs _ _) ->
-    let MultiAbs ys m' = extractMultiAbs (Abs y m)
-    in  MultiAbs (x:ys) m'
-  _ -> MultiAbs [x,y] m
-extractMultiAbs lambdaTerm = lambdaTerm
-
 -- main function to infering types of lambda terms
 inferType :: LambdaTerm -> Maybe TermTypeInfo
 inferType lambdaTerm =
@@ -76,20 +59,18 @@ inferType' (App m1 m2) newType
                   Just ((m1m2TypeContextUnion, appTypeTheta2Applied), newType'' + 1)
 
 -- type infering of lambda abstraction
-inferType' (Abs x m) newType
-  | isNothing $ inferType' m 0 = Nothing
+inferType' (Abs [] m) newType = inferType' m newType
+inferType' (Abs (x:xs) m) newType
+  | isNothing $ inferedSubLambda = Nothing
   | otherwise =
-    let
-      Just ((mTypeContext, mType), newType') = inferType' m newType
-    in
       case lookup x mTypeContext of
         Nothing -> Just ((mTypeContext, FunType (VarType newType') mType), newType' + 1)
         Just xType -> Just ((deleteFromSet x mTypeContext, FunType xType mType), newType')
+      where
+        inferedSubLambda = inferType' (Abs xs m) newType
+        Just ((mTypeContext, mType), newType') = inferedSubLambda
+      
 
--- type infering of multi abstraction is rebuilding it as normal abstraction first
-inferType' (MultiAbs xs m) newType =
-  let normalAbstraction = multiAbsToAbs (MultiAbs xs m)
-  in inferType' normalAbstraction newType
 
 -- rename types to use adjacent names (starting from 1)
 reenumerateTermTypeInfo :: TermTypeInfo -> TermTypeInfo
