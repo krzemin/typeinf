@@ -11,8 +11,7 @@ data Type = VarType VarTypeName | FunType Type Type deriving Eq
 -- instance of show to pretty print types
 instance Show Type where
   show (VarType x) = [chr (944 + x)]
-  show (FunType (VarType x) (VarType y)) = show (VarType x) ++ "->" ++ show (VarType y)
-  show (FunType (VarType x) t) = show (VarType x) ++ "->(" ++ show t ++ ")"
+  show (FunType (VarType x) t) = show (VarType x) ++ "->" ++ show t ++ ""
   show (FunType t (VarType x)) = "(" ++ show t ++ ")->" ++ show (VarType x)
   show (FunType t1 t2) = "(" ++ show t1 ++ ")->" ++ show t2
 
