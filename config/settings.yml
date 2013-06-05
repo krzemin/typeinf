@@ -2,7 +2,7 @@ Default: &defaults
   host: "*4" # any IPv4 host
   port: 3000
   approot: "http://localhost:3000"
-  copyright: Copyright (c) 2013 by Krzemin. Powered by TypeInf.hs
+  copyright: Copyright (c) 2013 by Krzemin.
   #analytics: UA-YOURCODE
 
 Development:
@@ -15,5 +15,7 @@ Staging:
   <<: *defaults
 
 Production:
-  approot: "http://typeinf.herokuapp.com"
   <<: *defaults
+  approot: "http://typeinf.herokuapp.com"
+  analytics: UA-41507531-1
+  
