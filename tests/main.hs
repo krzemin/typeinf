@@ -10,7 +10,7 @@ import Yesod.Test
 import Test.Hspec (hspec)
 import Application (makeFoundation)
 
---import HomeTest
+import TypeInfererTest
 
 main :: IO ()
 main = do
@@ -18,4 +18,6 @@ main = do
                 { csParseExtra = parseExtra
                 }
     foundation <- makeFoundation conf
-    hspec $ yesodSpec foundation $ return ()
+    hspec $ do
+        yesodSpec foundation $ do
+            typeInfSpecs
