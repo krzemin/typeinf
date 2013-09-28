@@ -3,6 +3,8 @@ typeinf
 
 Simply-typed lambda calculus type inferer
 
+Also available on http://typeinf.herokuapp.com
+
 usage
 =====
 
